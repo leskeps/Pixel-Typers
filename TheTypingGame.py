@@ -81,8 +81,11 @@ def get_paragraph_for_difficulty(difficulty):
 
 def get_time_limit_for_difficulty(difficulty):
     """Get time limit in seconds based on difficulty."""
-    # All difficulties have 1 minute timer
-    return 60  # 1 minute
+    # Easy: 1:00 (60s). Normal & Hard: 1:30 (90s).
+    if difficulty == "Easy":
+        return 60
+    else:
+        return 90
 
 class InteractiveButton:
     """Simple button class for pause/back button."""
@@ -636,7 +639,10 @@ def main(difficulty="Normal"):
             accuracy = max(0.0, min(100.0, accuracy))
             
             # Draw completion message (larger font)
-            completion_text = title_font.render("Typing Complete!", True, GREEN)
+            if time_ran_out:
+                completion_text = title_font.render("Typing Incomplete", True, RED)
+            else:
+                completion_text = title_font.render("Typing Complete!", True, GREEN)
             completion_rect = completion_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 120))
             screen.blit(completion_text, completion_rect)
             
