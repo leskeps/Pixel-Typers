@@ -64,11 +64,11 @@ BACK_BUTTON_SIZE = 44
 BACK_BUTTON_PADDING = 16
 
 # Paragraphs for different difficulties
-EASY_PARAGRAPH = "The quick brown fox jumps over the lazy dog. This is a simple sentence for beginners to practice typing. Each word is easy to read and type correctly."
+EASY_PARAGRAPH = "the quick brown fox jumps over the lazy dog this is a simple sentence for beginners to practice typing each word is easy to read and type correctly it helps improve speed and accuracy while building confidence in writing short phrases it is often used in typing lessons because it includes every letter in the alphabet making it a perfect exercise for anyone learning to type"
 
-NORMAL_PARAGRAPH = "Pixelated games are cool because they bring a mix of nostalgia and creativity their simple blocky art style reminds players of old classic games while still feeling Fresh and Fun today they show that even without realistic graphics games can be full of life emotion and beauty pixel art lets players use their imagination and brings a special charm that modern styles sometimes miss making every scene and character Feel unique and memorable"
+NORMAL_PARAGRAPH = "Pixelated games are cool because they bring a mix of nostalgia and creativity! Their simple, blocky art style reminds players of old classic games while still feeling fresh, fun, and exciting today. They show that even without realistic graphics, games can be full of life, emotion, and beauty: proof that imagination matters more than pixels per inch. Pixel art lets players use their imagination; it brings a special charm that modern styles sometimes miss making every scene and character feel unique, vibrant, and truly memorable!"
 
-HARD_PARAGRAPH = "Programming requires meticulous attention to detail and logical thinking. Developers must understand complex algorithms and data structures to create efficient software solutions. The process involves writing clean code, debugging errors, and optimizing performance. Collaboration with team members is essential for building large scale applications that meet user requirements and industry standards."
+HARD_PARAGRAPH = "Programming requires meticulous attention to detail and logical thinking! Developers must understand complex algorithms and data structures to create efficient software solutions. The process involves several key steps: 1. writing clean, readable code; 2. debugging and fixing errors; and 3. optimizing performance for speed and reliability. Collaboration with team members, through meetings, code reviews, and shared tools, is essential for building large-scale applications that meet user requirements, industry standards, and ever-changing technological demands!"
 
 def get_paragraph_for_difficulty(difficulty):
     """Get paragraph text based on difficulty."""
