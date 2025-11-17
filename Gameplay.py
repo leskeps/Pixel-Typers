@@ -397,11 +397,195 @@ class InteractiveButton:
             self.is_pressed = False
             self.update_image_state()
 
+class PopupModal:
+    """Modal popup for displaying messages with an image and button."""
+    def __init__(self, title, message, image_path, button_text="I Understand!"):
+        self.title = title
+        self.message = message
+        self.button_text = button_text
+        self.is_active = False
+        self.image = None
+        self.image_frames = []  # For animated GIFs
+        self.current_frame_index = 0
+        self.last_frame_update = pygame.time.get_ticks()
+        self.frame_delay = 100  # milliseconds between frames
+        self.button_rect = None
+        self.button_hovered = False
+        
+        # Load image (GIF or static image)
+        self.load_image(image_path)
+        
+        # Modal dimensions
+        self.modal_width = 500
+        self.modal_height = 450
+        self.modal_x = (SCREEN_WIDTH - self.modal_width) // 2
+        self.modal_y = (SCREEN_HEIGHT - self.modal_height) // 2
+        
+        # Button dimensions
+        self.button_width = 280
+        self.button_height = 50
+        self.button_x = self.modal_x + (self.modal_width - self.button_width) // 2
+        self.button_y = self.modal_y + self.modal_height - 80
+        self.button_rect = pygame.Rect(self.button_x, self.button_y, self.button_width, self.button_height)
+    
+    def load_image(self, image_path):
+        """Load image from path (supports static images and GIFs)."""
+        try:
+            if os.path.exists(image_path):
+                # Check if it's a GIF
+                if image_path.lower().endswith('.gif'):
+                    self.load_gif(image_path)
+                else:
+                    # Load static image
+                    self.image = pygame.image.load(image_path).convert_alpha()
+                    self.scale_image()
+                    print(f"Loaded popup image: {image_path}")
+            else:
+                print(f"Warning: Popup image not found: {image_path}")
+        except Exception as e:
+            print(f"Error loading popup image: {e}")
+    
+    def load_gif(self, gif_path):
+        """Load GIF frames using imageio."""
+        try:
+            reader = imageio.get_reader(gif_path)
+            for frame in reader:
+                # Convert frame to pygame surface
+                frame_surface = pygame.image.fromstring(frame.tobytes(), frame.shape[1::-1], 'RGB').convert_alpha()
+                self.image_frames.append(frame_surface)
+            reader.close()
+            
+            if self.image_frames:
+                self.image = self.image_frames[0]
+                self.scale_image()
+                print(f"Loaded GIF: {gif_path} with {len(self.image_frames)} frames")
+            else:
+                print(f"Error: No frames loaded from GIF: {gif_path}")
+        except Exception as e:
+            print(f"Error loading GIF: {e}")
+    
+    def scale_image(self):
+        """Scale image to fit in modal (max 120x120)."""
+        if self.image:
+            max_size = 120
+            if self.image.get_width() > max_size or self.image.get_height() > max_size:
+                self.image = pygame.transform.scale(self.image, (max_size, max_size))
+            
+            # Also scale all GIF frames
+            if self.image_frames:
+                self.image_frames = [
+                    pygame.transform.scale(frame, (max_size, max_size)) if frame.get_width() > max_size or frame.get_height() > max_size else frame
+                    for frame in self.image_frames
+                ]
+    
+    def update_gif_frame(self):
+        """Update GIF animation frame."""
+        if not self.image_frames or len(self.image_frames) <= 1:
+            return
+        
+        current_ticks = pygame.time.get_ticks()
+        if current_ticks - self.last_frame_update >= self.frame_delay:
+            self.current_frame_index = (self.current_frame_index + 1) % len(self.image_frames)
+            self.image = self.image_frames[self.current_frame_index]
+            self.last_frame_update = current_ticks
+    
+    def handle_event(self, event):
+        """Handle events for the modal."""
+        if not self.is_active:
+            return False
+        
+        if event.type == pygame.MOUSEMOTION:
+            self.button_hovered = self.button_rect.collidepoint(event.pos)
+        
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 1 and self.button_rect.collidepoint(event.pos):
+                self.is_active = False
+                return True
+        
+        return False
+    
+    def draw(self, screen_surface):
+        """Draw the modal popup."""
+        if not self.is_active:
+            return
+        
+        # Update GIF frame if animated
+        self.update_gif_frame()
+        
+        # Draw semi-transparent overlay
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))  # Semi-transparent black
+        screen_surface.blit(overlay, (0, 0))
+        
+        # Draw modal background
+        modal_rect = pygame.Rect(self.modal_x, self.modal_y, self.modal_width, self.modal_height)
+        pygame.draw.rect(screen_surface, BACKGROUND_COLOR, modal_rect)
+        pygame.draw.rect(screen_surface, BLUE, modal_rect, width=3, border_radius=10)
+        
+        # Draw title
+        title_surface = title_font.render(self.title, True, WHITE)
+        title_rect = title_surface.get_rect(center=(self.modal_x + self.modal_width // 2, self.modal_y + 30))
+        screen_surface.blit(title_surface, title_rect)
+        
+        # Draw image if loaded (top right of modal)
+        if self.image:
+            image_x = self.modal_x + self.modal_width - self.image.get_width() - 15
+            image_y = self.modal_y + 15
+            screen_surface.blit(self.image, (image_x, image_y))
+        
+        # Draw message text (wrapped)
+        message_lines = self.wrap_text_for_modal(self.message, 450)
+        line_y = self.modal_y + 180
+        for line in message_lines:
+            line_surface = button_font.render(line, True, WHITE)
+            line_rect = line_surface.get_rect(center=(self.modal_x + self.modal_width // 2, line_y))
+            screen_surface.blit(line_surface, line_rect)
+            line_y += 35
+        
+        # Draw button
+        button_color = (0, 150, 255) if self.button_hovered else BLUE
+        pygame.draw.rect(screen_surface, button_color, self.button_rect, border_radius=5)
+        pygame.draw.rect(screen_surface, (0, 100, 200), self.button_rect, width=2, border_radius=5)
+        
+        # Draw button text
+        button_text_surface = button_font.render(self.button_text, True, WHITE)
+        button_text_rect = button_text_surface.get_rect(center=self.button_rect.center)
+        screen_surface.blit(button_text_surface, button_text_rect)
+    
+    def wrap_text_for_modal(self, text, max_width):
+        """Wrap text to fit modal width."""
+        words = text.split()
+        lines = []
+        current_line = []
+        
+        for word in words:
+            test_line = ' '.join(current_line + [word])
+            test_surface = button_font.render(test_line, True, WHITE)
+            if test_surface.get_width() <= max_width:
+                current_line.append(word)
+            else:
+                if current_line:
+                    lines.append(' '.join(current_line))
+                current_line = [word]
+        
+        if current_line:
+            lines.append(' '.join(current_line))
+        
+        return lines
+    
+    def show(self):
+        """Show the modal."""
+        self.is_active = True
+        self.current_frame_index = 0
+        self.last_frame_update = pygame.time.get_ticks()
+    
+    def hide(self):
+        """Hide the modal."""
+        self.is_active = False
+
 def main():
     """Main function for the Gameplay module."""
     print("Gameplay.py main() function called")
-    
-    # Do not change working directory; rely on relative paths from the launcher
     
     clock = pygame.time.Clock()
     running = True
@@ -409,6 +593,15 @@ def main():
     # Initialize with selection screen
     current_state = SELECTION_SCREEN
     buttons = initialize_buttons()
+    
+    # Initialize popup modal
+    popup = PopupModal(
+        "Sorry!",
+        "Multiplayer Feature has not yet been added it is to be added in Future Updates.",
+        os.path.join('images', '200.gif'),
+        "I Understand!"
+    )
+    
     print(f"Initialized {len(buttons)} buttons: {[btn.button_name for btn in buttons]}")
     
     # Simple game loop for demonstration
@@ -417,71 +610,62 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             
-            # Keyboard shortcut to go back
+            # Handle popup events first
+            if popup.handle_event(event):
+                print("Popup closed")
+            
+            # Keyboard shortcut to go back (only if popup is not active)
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
-                    if current_state == DIFFICULTY_SCREEN:
-                        # Go back to selection screen
+                    if popup.is_active:
+                        popup.hide()
+                    elif current_state == DIFFICULTY_SCREEN:
                         print("Keyboard back pressed - returning to selection screen")
                         current_state = SELECTION_SCREEN
                         buttons = initialize_buttons()
                     else:
-                        # Go back to main menu
                         print("Keyboard back pressed - returning to Pixel Typers main menu")
                         return "BACK_TO_MAIN"
             
-            # Handle button events
-            for button in buttons:
-                if button.handle_event(event):
-                    # Button was clicked - handle specific button actions
-                    print(f"Button clicked: {button.button_name}")
-                    
-                    # Handle back button click
-                    if button.button_name == "BackButton":
-                        if current_state == DIFFICULTY_SCREEN:
-                            # Go back to selection screen
-                            print("Back button clicked - returning to selection screen")
-                            current_state = SELECTION_SCREEN
-                            buttons = initialize_buttons()
-                        else:
-                            # Go back to main menu
-                            print("Back button clicked - returning to Pixel Typers main menu")
-                            return "BACK_TO_MAIN"
-                    
-                    # Handle practice button click
-                    elif button.button_name == "PracticeBTN":
-                        print("Practice button clicked - showing difficulty selection")
-                        current_state = DIFFICULTY_SCREEN
-                        buttons = initialize_difficulty_buttons()
-                        print(f"Switched to difficulty screen with {len(buttons)} buttons")
-                    
-                    # Handle multiplayer button click
-                    elif button.button_name == "MultiplayerBTN":
-                        print("Multiplayer button clicked - multiplayer mode selected")
-                        # Add multiplayer mode functionality here in future phases
-                    
-                    # Handle difficulty button clicks
-                    elif button.button_name in ["EasyBTN", "NormalBTN", "HardBTN"]:
-                        difficulty = button.button_name.replace("BTN", "")
-                        print(f"Difficulty button clicked: {difficulty}")
+            # Handle button events (only if popup is not active)
+            if not popup.is_active:
+                for button in buttons:
+                    if button.handle_event(event):
+                        print(f"Button clicked: {button.button_name}")
                         
-                        # Launch typing game with selected difficulty
-                        if TYPING_GAME_AVAILABLE:
-                            print(f"Launching typing game with difficulty: {difficulty}")
-                            result = TheTypingGame.main(difficulty)
-                            
-                            # Handle return from typing game
-                            if result == "BACK_TO_DIFFICULTY":
-                                print("Returned from typing game to difficulty selection")
-                                # Stay on difficulty screen
-                                current_state = DIFFICULTY_SCREEN
-                                buttons = initialize_difficulty_buttons()
+                        if button.button_name == "BackButton":
+                            if current_state == DIFFICULTY_SCREEN:
+                                print("Back button clicked - returning to selection screen")
+                                current_state = SELECTION_SCREEN
+                                buttons = initialize_buttons()
                             else:
-                                # If game ended normally, return to difficulty selection
-                                current_state = DIFFICULTY_SCREEN
-                                buttons = initialize_difficulty_buttons()
-                        else:
-                            print("ERROR: TheTypingGame module not available")
+                                print("Back button clicked - returning to Pixel Typers main menu")
+                                return "BACK_TO_MAIN"
+                        
+                        elif button.button_name == "PracticeBTN":
+                            print("Practice button clicked - showing difficulty selection")
+                            current_state = DIFFICULTY_SCREEN
+                            buttons = initialize_difficulty_buttons()
+                        
+                        elif button.button_name == "MultiplayerBTN":
+                            print("Multiplayer button clicked - showing popup")
+                            popup.show()
+                        
+                        elif button.button_name in ["EasyBTN", "NormalBTN", "HardBTN"]:
+                            difficulty = button.button_name.replace("BTN", "")
+                            print(f"Difficulty button clicked: {difficulty}")
+                            
+                            if TYPING_GAME_AVAILABLE:
+                                print(f"Launching typing game with difficulty: {difficulty}")
+                                result = TheTypingGame.main(difficulty)
+                                
+                                if result == "BACK_TO_DIFFICULTY":
+                                    print("Returned from typing game to difficulty selection")
+                                    current_state = DIFFICULTY_SCREEN
+                                    buttons = initialize_difficulty_buttons()
+                                else:
+                                    current_state = DIFFICULTY_SCREEN
+                                    buttons = initialize_difficulty_buttons()
         
         # Clear screen with custom background color
         screen.fill(BACKGROUND_COLOR)
@@ -489,6 +673,9 @@ def main():
         # Draw buttons based on current state
         for button in buttons:
             button.draw(screen)
+        
+        # Draw popup if active
+        popup.draw(screen)
         
         # Update display
         pygame.display.flip()
