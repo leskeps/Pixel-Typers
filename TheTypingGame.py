@@ -64,11 +64,11 @@ BACK_BUTTON_SIZE = 44
 BACK_BUTTON_PADDING = 16
 
 # Paragraphs for different difficulties
-EASY_PARAGRAPH = "the quick brown fox jumps over the lazy dog this is a simple sentence for beginners to practice typing each word is easy to read and type correctly it helps improve speed and accuracy while building confidence in writing short phrases it is often used in typing lessons because it includes every letter in the alphabet making it a perfect exercise for anyone learning to type"
+EASY_PARAGRAPH = "The quick brown fox jumps over the lazy dog. This is a simple sentence for beginners to practice typing. Each word is easy to read and type correctly."
 
-NORMAL_PARAGRAPH = "Pixelated games are cool because they bring a mix of nostalgia and creativity! Their simple, blocky art style reminds players of old classic games while still feeling fresh, fun, and exciting today. They show that even without realistic graphics, games can be full of life, emotion, and beauty: proof that imagination matters more than pixels per inch. Pixel art lets players use their imagination; it brings a special charm that modern styles sometimes miss making every scene and character feel unique, vibrant, and truly memorable!"
+NORMAL_PARAGRAPH = "Pixelated games are cool because they bring a mix of nostalgia and creativity their simple blocky art style reminds players of old classic games while still feeling Fresh and Fun today they show that even without realistic graphics games can be full of life emotion and beauty pixel art lets players use their imagination and brings a special charm that modern styles sometimes miss making every scene and character Feel unique and memorable"
 
-HARD_PARAGRAPH = "Programming requires meticulous attention to detail and logical thinking! Developers must understand complex algorithms and data structures to create efficient software solutions. The process involves several key steps: 1. writing clean, readable code; 2. debugging and fixing errors; and 3. optimizing performance for speed and reliability. Collaboration with team members, through meetings, code reviews, and shared tools, is essential for building large-scale applications that meet user requirements, industry standards, and ever-changing technological demands!"
+HARD_PARAGRAPH = "Programming requires meticulous attention to detail and logical thinking. Developers must understand complex algorithms and data structures to create efficient software solutions. The process involves writing clean code, debugging errors, and optimizing performance. Collaboration with team members is essential for building large scale applications that meet user requirements and industry standards."
 
 def get_paragraph_for_difficulty(difficulty):
     """Get paragraph text based on difficulty."""
@@ -262,18 +262,13 @@ def render_user_input(screen, user_input, expected_text, font, start_x, start_y,
         if expected_index < len(expected_text):
             expected_char = expected_text[expected_index]
             is_correct = (typed_char == expected_char)
-            color = WHITE if is_correct else RED
         else:
             # Extra characters typed
-            color = RED
+            is_correct = False
         
         # Get the width of the expected character (for alignment) and typed character (for rendering)
         expected_char_surface = font.render(expected_char if expected_index < len(expected_text) else ' ', True, UNTYPED_COLOR)
         expected_char_width = expected_char_surface.get_width()
-        
-        # Render the character the user typed
-        typed_char_surface = font.render(typed_char, True, color)
-        typed_char_width = typed_char_surface.get_width()
         
         # Check if we need to wrap to next line (use expected text's wrapping logic)
         # This ensures alignment with the original text
@@ -288,15 +283,23 @@ def render_user_input(screen, user_input, expected_text, font, start_x, start_y,
                 current_x = start_x
                 current_y += line_height
         
-        # Render the typed character at the position where the expected character should be
-        screen.blit(typed_char_surface, (current_x, current_y))
+        # If correct, render the typed character in white
+        if is_correct:
+            typed_char_surface = font.render(typed_char, True, WHITE)
+            screen.blit(typed_char_surface, (current_x, current_y))
+        else:
+            # If incorrect, draw a transparent red rectangle instead of showing the character
+            mistake_box = pygame.Surface((expected_char_width, line_height), pygame.SRCALPHA)
+            mistake_box.fill((255, 0, 0, 100))  # Red with transparency (more transparent)
+            screen.blit(mistake_box, (current_x, current_y))
         
         # Advance position using expected character width to maintain alignment
         if expected_index < len(expected_text):
             current_x += expected_char_width
         else:
-            # For extra characters, use typed character width
-            current_x += typed_char_width
+            # For extra characters, use space width
+            space_surface = font.render(' ', True, UNTYPED_COLOR)
+            current_x += space_surface.get_width()
         
         expected_index += 1
 
